@@ -132,6 +132,16 @@
   animation: sparkle-animation 2s infinite linear;
 }
 
+/* Animation for glowing star on card hover */
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(123, 58, 237, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(123, 58, 237, 0.8));
+  }
+}
+
 @keyframes sparkle-animation {
   0% {
     background-position: 0 0, 4px 4px;
@@ -158,4 +168,38 @@
 
 .animate-float {
   animation: float 5s ease-in-out infinite;
+}
+
+/* New animations for challenge cards */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s infinite ease-in-out;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 5s infinite ease-in-out;
+}
+
+/* Animation for fading in elements */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+/* Hexagon shape for category tiles */
+.hexagon {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 }
