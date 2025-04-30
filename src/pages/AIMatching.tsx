@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { LightbulbIcon, RobotIcon, UserIcon, HexagonIcon, LinkIcon } from 'lucide-react';
+import { LightbulbIcon, BotIcon, UserIcon, HexagonIcon, LinkIcon } from 'lucide-react';
 import ActionButton from '@/components/ActionButton';
 import SparkParticles from '@/components/SparkParticles';
 import MatchProfileCard from '@/components/MatchProfileCard';
@@ -164,7 +164,7 @@ const AIMatching = () => {
             <div className="lg:col-span-1">
               <Card className="holographic-card border-0 p-6">
                 <div className="flex items-center mb-6">
-                  <RobotIcon className="h-6 w-6 text-cosmic-accent mr-2" />
+                  <BotIcon className="h-6 w-6 text-cosmic-accent mr-2" />
                   <h3 className="text-xl font-medium text-white">AI Assistant</h3>
                 </div>
                 
