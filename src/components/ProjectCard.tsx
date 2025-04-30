@@ -11,6 +11,7 @@ interface ProjectCardProps {
   duration: string;
   tags: string[];
   className?: string;
+  style?: React.CSSProperties; // Add this line to accept style prop
 }
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -20,7 +21,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   maxParticipants,
   duration,
   tags,
-  className
+  className,
+  style // Add this parameter
 }) => {
   return (
     <div 
@@ -28,6 +30,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         "holographic-card rounded-xl p-5 w-full max-w-sm transition-all duration-300 hover:shadow-[0_0_15px_rgba(123,58,237,0.5)] group",
         className
       )}
+      style={style} // Apply the style prop
     >
       <div className="mb-2">
         {tags.map((tag, index) => (

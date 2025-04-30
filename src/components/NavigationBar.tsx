@@ -1,10 +1,12 @@
 
 import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MenuIcon, SparklesIcon } from 'lucide-react';
 
 const NavigationBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const location = useLocation();
 
   // Handle scroll effect
   React.useEffect(() => {
@@ -24,16 +26,18 @@ const NavigationBar = () => {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <SparklesIcon className="text-cosmic-light h-7 w-7" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-cosmic-light to-cosmic-accent bg-clip-text text-transparent">
-              CollabSpark
-            </h1>
+            <Link to="/">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-cosmic-light to-cosmic-accent bg-clip-text text-transparent">
+                CollabSpark
+              </h1>
+            </Link>
           </div>
           
           <div className="hidden md:flex items-center gap-8">
-            <NavLink href="#" active>Home</NavLink>
-            <NavLink href="#">Discover</NavLink>
-            <NavLink href="#">Challenges</NavLink>
-            <NavLink href="#">About</NavLink>
+            <NavLink href="/" active={location.pathname === '/'}>Home</NavLink>
+            <NavLink href="/ai-matching" active={location.pathname === '/ai-matching'}>AI Matching</NavLink>
+            <NavLink href="/challenges" active={location.pathname === '/challenges'}>Challenges</NavLink>
+            <NavLink href="/about" active={location.pathname === '/about'}>About</NavLink>
           </div>
           
           <div className="flex items-center gap-4">
@@ -61,8 +65,8 @@ interface NavLinkProps {
 
 const NavLink: React.FC<NavLinkProps> = ({ href, children, active }) => {
   return (
-    <a 
-      href={href} 
+    <Link 
+      to={href} 
       className={`relative px-1 py-2 text-lg transition-all duration-300 group ${
         active ? 'text-white font-medium' : 'text-cosmic-light hover:text-white'
       }`}
@@ -71,7 +75,7 @@ const NavLink: React.FC<NavLinkProps> = ({ href, children, active }) => {
       <span className={`absolute bottom-0 left-0 w-full h-0.5 transform origin-left transition-transform duration-300 ${
         active ? 'scale-x-100 bg-cosmic-accent' : 'scale-x-0 bg-white group-hover:scale-x-100'
       }`}></span>
-    </a>
+    </Link>
   );
 };
 
