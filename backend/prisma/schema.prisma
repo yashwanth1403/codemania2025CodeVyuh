@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Profile Model
+model User {
+  id            String    @id @default(uuid())
+  clerkId       String    @unique
+  email         String    @unique
+  username      String    @unique
+  name          String
+  bio           String?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Skills & Interests
+  skills        Skill[]
+  interests     Interest[]
+  
+  // Experience Level
+  experienceLevel String?
+  
+  // Social Links
+  socialLinks   SocialLink[]
+  
+  // Team and Project Relationships
+  ownedProjects Project[]  @relation("ProjectOwner")
+  teams         TeamMember[]
+  projectMembers ProjectMember[]
+  
+  // Gamification
+  xpPoints      Int       @default(0)
+  badges        UserBadge[]
+  
+  // Challenges
+  challengesParticipated Challenge[] @relation("ChallengeParticipants")
+  
+  // AI
+  aiSuggestions AISuggestion[]
+}
+
+// Skills that users can have
+model Skill {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  category    String    
+  users       User[]
+  projects    Project[]
+}
+
+// Interests that users can have
+model Interest {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  category    String
+  users       User[]
+}
+
+// Social media links for users
+model SocialLink {
+  id          String    @id @default(uuid())
+  platform    String    
+  url         String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  @@unique([userId, platform])
+}
+
+// Projects
+model Project {
+  id              String    @id @default(uuid())
+  title           String
+  description     String
+  thumbnailUrl    String?
+  deadline        DateTime?
+  status          String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relationships
+  owner           User      @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId         String
+  team            TeamMember[]
+  members         ProjectMember[]
+  requiredSkills  Skill[]
+  milestones      Milestone[]
+  tasks           Task[]
+  
+  // Challenge relationship
+  challenge       Challenge? @relation(fields: [challengeId], references: [id])
+  challengeId     String?
+}
+
+// Project Members (different from team to track specific project involvement)
+model ProjectMember {
+  id          String    @id @default(uuid())
+  role        String
+  joinedAt    DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  
+  @@unique([userId, projectId])
+}
+
+// Teams
+model Team {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  members     TeamMember[]
+}
+
+// Team Members
+model TeamMember {
+  id          String    @id @default(uuid())
+  role        String    // OWNER, ADMIN, MEMBER
+  joinedAt    DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  
+  // A team member can also be linked to projects
+  project     Project?  @relation(fields: [projectId], references: [id])
+  projectId   String?
+  
+  @@unique([userId, teamId])
+}
+
+// Project Milestones
+model Milestone {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  
+  tasks       Task[]
+}
+
+// Project Tasks
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  dueDate     DateTime?
+  
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id])
+  milestoneId String?
+}
+
+// Gamification Badges
+model Badge {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String
+  imageUrl    String
+  xpValue     Int       @default(0)
+  
+  users       UserBadge[]
+}
+
+// User-Badge join table
+model UserBadge {
+  id          String    @id @default(uuid())
+  awardedAt   DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  
+  badge       Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  badgeId     String
+  
+  @@unique([userId, badgeId])
+}
+
+// Challenges for micro-collaborations
+model Challenge {
+  id              String    @id @default(uuid())
+  title           String
+  description     String
+  thumbnailUrl    String?
+  startDate       DateTime
+  endDate         DateTime
+  difficulty      String    // EASY, MEDIUM, HARD
+  xpReward        Int       @default(0)
+  status          String    @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Project submissions for this challenge
+  projects        Project[]
+  
+  // Participants
+  participants    User[]    @relation("ChallengeParticipants")
+}
+
+// AI Suggestions model
+model AISuggestion {
+  id              String    @id @default(uuid())
+  type            String    // PROJECT_IDEA, COLLABORATOR, SKILL
+  content         String
+  createdAt       DateTime  @default(now())
+  
+  // Who received this suggestion
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  
+  // If the suggestion was used
+  isUsed          Boolean   @default(false)
+  usedAt          DateTime?
+}
