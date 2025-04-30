@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AIMatching from "./pages/AIMatching";
 import ChallengesHub from "./pages/ChallengesHub";
+import GamificationProfile from "./pages/GamificationProfile"; // Add import for new page
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/ai-matching" element={<AIMatching />} />
           <Route path="/challenges" element={<ChallengesHub />} />
+          <Route path="/profile" element={<GamificationProfile />} /> {/* Add new route */}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
