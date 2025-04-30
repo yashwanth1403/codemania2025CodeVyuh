@@ -1,14 +1,31 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import NavigationBar from "@/components/NavigationBar";
 import { Button } from "@/components/ui/button";
-import { HexagonIcon, StarIcon, Circle, Link2Icon } from "lucide-react";
+import {
+  HexagonIcon,
+  StarIcon,
+  Circle,
+  Link2Icon,
+  FilterIcon,
+  SlidersHorizontal,
+} from "lucide-react";
 import ActionButton from "@/components/ActionButton";
-import SparkParticles from "@/components/SparkParticles";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import CategoryHoneycomb from "@/components/challenges/CategoryHoneycomb";
 import FilterSystem from "@/components/challenges/FilterSystem";
 import EnhancedChallengeCard from "@/components/challenges/EnhancedChallengeCard";
+import ChallengeDetails from "@/components/challenges/ChallengeDetails";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getAllChallenges,
+  getChallengeById,
+  joinChallenge,
+  leaveChallenge,
+  Challenge,
+} from "@/services/challengeService";
+import { formatDifficulty, calculateDuration } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Constants moved to the beginning for better organization
 const filters = {
@@ -25,167 +42,277 @@ const filters = {
   duration: ["All", "24 hours", "48 hours", "72 hours", "1 week"],
 };
 
-const challenges = [
-  {
-    id: 1,
-    title: "AI-Powered Study Assistant",
-    description:
-      "Design and prototype an AI chatbot that helps students organize their study schedule and provides personalized learning tips.",
-    category: "Design",
-    difficulty: "Intermediate",
-    duration: "48 hours",
-    participantsCount: 3,
-    maxParticipants: 5,
-    tags: ["AI/ML", "UX/UI", "Education"],
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Campus Sustainability Dashboard",
-    description:
-      "Build a real-time dashboard that visualizes energy usage, waste management, and sustainability metrics across campus buildings.",
-    category: "Development",
-    difficulty: "Advanced",
-    duration: "72 hours",
-    participantsCount: 4,
-    maxParticipants: 6,
-    tags: ["Data Viz", "Full-Stack", "Sustainability"],
-    featured: false,
-  },
-  {
-    id: 3,
-    title: "AR Campus Tour Guide",
-    description:
-      "Create an augmented reality experience that guides new students and visitors through important campus locations with interactive elements.",
-    category: "Development",
-    difficulty: "Advanced",
-    duration: "72 hours",
-    participantsCount: 2,
-    maxParticipants: 4,
-    tags: ["AR/VR", "Mobile", "3D Modeling"],
-    featured: true,
-  },
-  {
-    id: 4,
-    title: "Student Mental Health App",
-    description:
-      "Design a mobile app focused on supporting student mental health through guided meditation, mood tracking, and resource connection.",
-    category: "Design",
-    difficulty: "Intermediate",
-    duration: "48 hours",
-    participantsCount: 3,
-    maxParticipants: 5,
-    tags: ["Health", "UX/UI", "Mobile"],
-    featured: false,
-  },
-  {
-    id: 5,
-    title: "Campus Event Discovery Platform",
-    description:
-      "Build a platform that helps students discover events, clubs, and activities based on their interests and schedule.",
-    category: "Development",
-    difficulty: "Intermediate",
-    duration: "72 hours",
-    participantsCount: 5,
-    maxParticipants: 6,
-    tags: ["Web Dev", "Database", "API"],
-    featured: false,
-  },
-  {
-    id: 6,
-    title: "Research Data Visualization Tool",
-    description:
-      "Create an interactive visualization tool to help researchers present complex data in intuitive, engaging ways.",
-    category: "Data Science",
-    difficulty: "Advanced",
-    duration: "72 hours",
-    participantsCount: 2,
-    maxParticipants: 4,
-    tags: ["Data Viz", "Analytics", "Research"],
-    featured: true,
-  },
-];
-
 const ChallengesHub: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // State
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeDifficulty, setActiveDifficulty] = useState("All");
   const [activeDuration, setActiveDuration] = useState("All");
-  const [filteredChallenges, setFilteredChallenges] = useState(challenges);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [filteredChallenges, setFilteredChallenges] = useState<Challenge[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [connectionLines, setConnectionLines] = useState<
-    { from: number; to: number }[]
+    { from: string; to: string }[]
   >([]);
-  const { toast } = useToast();
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(
+    null
+  );
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Fetch challenges on component mount
+  useEffect(() => {
+    const fetchChallenges = async () => {
+      try {
+        const data = await getAllChallenges();
+        setChallenges(data);
+        setFilteredChallenges(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching challenges:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load challenges. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+    };
+
+    fetchChallenges();
+  }, [toast]);
 
   useEffect(() => {
     setIsLoaded(true);
 
-    // Generate random connection lines between challenges
-    const tempLines: { from: number; to: number }[] = [];
+    // Generate random connection lines between related challenges
+    if (challenges.length > 0) {
+      const tempLines: { from: string; to: string }[] = [];
 
-    challenges.forEach((challenge) => {
-      const similarChallenges = challenges.filter(
-        (c) =>
-          c.id !== challenge.id &&
-          (c.category === challenge.category ||
-            c.tags.some((tag) => challenge.tags.includes(tag)))
-      );
+      challenges.forEach((challenge) => {
+        // Find similar challenges based on tags
+        const similarChallenges = challenges.filter(
+          (c) =>
+            c.id !== challenge.id &&
+            (c.category === challenge.category ||
+              (c.tags &&
+                challenge.tags &&
+                c.tags.some((tag) => challenge.tags?.includes(tag))))
+        );
 
-      if (similarChallenges.length > 0) {
-        const randomSimilar =
-          similarChallenges[
-            Math.floor(Math.random() * similarChallenges.length)
-          ];
-        if (
-          !tempLines.some(
-            (line) =>
-              (line.from === challenge.id && line.to === randomSimilar.id) ||
-              (line.from === randomSimilar.id && line.to === challenge.id)
-          )
-        ) {
-          tempLines.push({
-            from: challenge.id,
-            to: randomSimilar.id,
-          });
+        if (similarChallenges.length > 0) {
+          const randomSimilar =
+            similarChallenges[
+              Math.floor(Math.random() * similarChallenges.length)
+            ];
+          if (
+            !tempLines.some(
+              (line) =>
+                (line.from === challenge.id && line.to === randomSimilar.id) ||
+                (line.from === randomSimilar.id && line.to === challenge.id)
+            )
+          ) {
+            tempLines.push({
+              from: challenge.id,
+              to: randomSimilar.id,
+            });
+          }
         }
-      }
-    });
+      });
 
-    setConnectionLines(tempLines);
-  }, []);
+      setConnectionLines(tempLines);
+    }
+  }, [challenges]);
 
   // Filter challenges based on selected filters
   useEffect(() => {
+    if (challenges.length === 0) return;
+
     let filtered = [...challenges];
 
+    // Category filter
     if (activeCategory !== "All") {
       filtered = filtered.filter(
         (challenge) => challenge.category === activeCategory
       );
     }
 
+    // Difficulty filter
     if (activeDifficulty !== "All") {
+      const difficultyMap: Record<string, string> = {
+        Beginner: "EASY",
+        Intermediate: "MEDIUM",
+        Advanced: "HARD",
+      };
+
       filtered = filtered.filter(
-        (challenge) => challenge.difficulty === activeDifficulty
+        (challenge) => challenge.difficulty === difficultyMap[activeDifficulty]
       );
     }
 
+    // Duration filter
     if (activeDuration !== "All") {
-      filtered = filtered.filter(
-        (challenge) => challenge.duration === activeDuration
-      );
+      filtered = filtered.filter((challenge) => {
+        const duration = calculateDuration(
+          challenge.startDate,
+          challenge.endDate
+        );
+        return duration === activeDuration;
+      });
     }
 
     setFilteredChallenges(filtered);
-  }, [activeCategory, activeDifficulty, activeDuration]);
+  }, [activeCategory, activeDifficulty, activeDuration, challenges]);
 
-  const handleViewChallenge = (challengeId: number) => {
-    toast({
-      title: "Challenge Selected",
-      description: `You've selected challenge #${challengeId}`,
-      variant: "default",
-    });
+  // Handle challenge selection for detailed view
+  const handleViewChallenge = async (challengeId: string) => {
+    try {
+      const challenge = await getChallengeById(challengeId);
+      setSelectedChallenge(challenge);
+    } catch (error) {
+      console.error(`Error fetching challenge ${challengeId}:`, error);
+      toast({
+        title: "Error",
+        description: "Failed to load challenge details. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle joining a challenge
+  const handleJoinChallenge = async (challengeId: string) => {
+    try {
+      // If user is logged in, use their ID, otherwise create a temporary guest ID
+      const participantId = user
+        ? user.id
+        : `guest_${Math.random().toString(36).substring(2, 9)}`;
+
+      await joinChallenge(challengeId, participantId);
+
+      // Update challenges data
+      setChallenges((prev) =>
+        prev.map((challenge) => {
+          if (challenge.id === challengeId) {
+            // Create a copy of the participants array or initialize it if it doesn't exist
+            const participants = challenge.participants
+              ? [...challenge.participants]
+              : [];
+            // Only add the user if they're not already in the array
+            if (!participants.includes(participantId)) {
+              participants.push(participantId);
+            }
+            return { ...challenge, participants };
+          }
+          return challenge;
+        })
+      );
+
+      // If there's a selected challenge, update it as well
+      if (selectedChallenge && selectedChallenge.id === challengeId) {
+        const participants = selectedChallenge.participants
+          ? [...selectedChallenge.participants]
+          : [];
+        if (!participants.includes(participantId)) {
+          participants.push(participantId);
+        }
+        setSelectedChallenge({ ...selectedChallenge, participants });
+      }
+
+      toast({
+        title: "Challenge Joined!",
+        description: "You've successfully joined the challenge.",
+      });
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error(`Error joining challenge ${challengeId}:`, error);
+      toast({
+        title: "Error",
+        description: "Failed to join challenge. Please try again.",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
+  };
+
+  // Handle leaving a challenge
+  const handleLeaveChallenge = async (challengeId: string) => {
+    try {
+      // If user is logged in, use their ID, otherwise we can't leave (this should rarely happen)
+      const participantId = user ? user.id : null;
+
+      if (!participantId) {
+        toast({
+          title: "Error",
+          description:
+            "Unable to identify your participation. Please try again.",
+          variant: "destructive",
+        });
+        return Promise.reject("No participant ID");
+      }
+
+      await leaveChallenge(challengeId, participantId);
+
+      // Update challenges data
+      setChallenges((prev) =>
+        prev.map((challenge) => {
+          if (challenge.id === challengeId && challenge.participants) {
+            const participants = challenge.participants.filter(
+              (id) => id !== participantId
+            );
+            return { ...challenge, participants };
+          }
+          return challenge;
+        })
+      );
+
+      // If there's a selected challenge, update it as well
+      if (
+        selectedChallenge &&
+        selectedChallenge.id === challengeId &&
+        selectedChallenge.participants
+      ) {
+        const participants = selectedChallenge.participants.filter(
+          (id) => id !== participantId
+        );
+        setSelectedChallenge({ ...selectedChallenge, participants });
+      }
+
+      toast({
+        title: "Challenge Left",
+        description: "You've successfully left the challenge.",
+      });
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error(`Error leaving challenge ${challengeId}:`, error);
+      toast({
+        title: "Error",
+        description: "Failed to leave challenge. Please try again.",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
+  };
+
+  // Format challenges for the EnhancedChallengeCard component
+  const formatChallengeForCard = (challenge: Challenge) => {
+    return {
+      id: challenge.id,
+      title: challenge.title,
+      description: challenge.description,
+      category: challenge.category || "Miscellaneous",
+      difficulty: formatDifficulty(challenge.difficulty),
+      duration: calculateDuration(challenge.startDate, challenge.endDate),
+      participantsCount: challenge.participants?.length || 0,
+      maxParticipants: challenge.maxParticipants || 5,
+      tags: challenge.tags || [],
+      featured: challenge.status === "ACTIVE",
+    };
   };
 
   return (
@@ -205,27 +332,119 @@ const ChallengesHub: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="mb-12"
+          className="mb-8"
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-white to-cosmic-light bg-clip-text text-transparent">
-              Challenge
-            </span>
-            <span className="bg-gradient-to-r from-cosmic-light to-cosmic-accent bg-clip-text text-transparent">
-              Marketplace
-            </span>
-          </h1>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold">
+              <span className="bg-gradient-to-r from-white to-cosmic-light bg-clip-text text-transparent">
+                Challenge
+              </span>
+              <span className="bg-gradient-to-r from-cosmic-light to-cosmic-accent bg-clip-text text-transparent">
+                Marketplace
+              </span>
+            </h1>
+
+            {/* Mobile filter toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="md:hidden mt-4 border-cosmic-light/30 text-cosmic-light"
+            >
+              <FilterIcon size={16} className="mr-2" />
+              Filters
+            </Button>
+          </div>
+
           <p className="text-lg text-gray-300 max-w-2xl mb-8">
             Explore micro-collaboration challenges designed to spark creativity
             and build your portfolio in just a few days.
           </p>
 
-          {/* Category Honeycomb */}
+          {/* Mobile filter section */}
+          <div
+            className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${
+              showMobileFilters
+                ? "max-h-[1000px] opacity-100 mb-6"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="holographic-card p-4 rounded-xl">
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold text-cosmic-light mb-2">
+                  Categories
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {filters.categories.map((category) => (
+                    <button
+                      key={category}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        category === activeCategory
+                          ? "bg-cosmic-primary text-white"
+                          : "bg-cosmic-dark/40 text-gray-300 hover:bg-cosmic-dark/60"
+                      }`}
+                      onClick={() => setActiveCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {/* Difficulty Filter */}
+                <div>
+                  <h3 className="text-sm font-medium text-cosmic-light mb-2">
+                    Difficulty
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {filters.difficulty.map((level) => (
+                      <button
+                        key={level}
+                        className={`px-3 py-1 rounded-full text-xs ${
+                          level === activeDifficulty
+                            ? "bg-cosmic-primary text-white"
+                            : "bg-cosmic-dark/40 text-gray-300 hover:bg-cosmic-dark/60"
+                        }`}
+                        onClick={() => setActiveDifficulty(level)}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Duration Filter */}
+                <div>
+                  <h3 className="text-sm font-medium text-cosmic-light mb-2">
+                    Duration
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {filters.duration.map((duration) => (
+                      <button
+                        key={duration}
+                        className={`px-3 py-1 rounded-full text-xs ${
+                          duration === activeDuration
+                            ? "bg-cosmic-primary text-white"
+                            : "bg-cosmic-dark/40 text-gray-300 hover:bg-cosmic-dark/60"
+                        }`}
+                        onClick={() => setActiveDuration(duration)}
+                      >
+                        {duration}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Category Honeycomb */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-10"
+            className="hidden md:block mb-10"
           >
             <h2 className="text-xl font-semibold mb-4 text-cosmic-light">
               Browse by Category
@@ -237,8 +456,8 @@ const ChallengesHub: React.FC = () => {
             />
           </motion.div>
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Desktop Filters */}
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Difficulty Filter */}
             <FilterSystem
               title="Difficulty Level"
@@ -293,7 +512,14 @@ const ChallengesHub: React.FC = () => {
 
         {/* Challenge cards */}
         <div>
-          {filteredChallenges.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin mr-2">
+                <Circle className="h-6 w-6 text-cosmic-accent" />
+              </div>
+              <p>Loading challenges...</p>
+            </div>
+          ) : filteredChallenges.length > 0 ? (
             <div
               className={`
               relative
@@ -350,10 +576,10 @@ const ChallengesHub: React.FC = () => {
               {filteredChallenges.map((challenge, index) => (
                 <EnhancedChallengeCard
                   key={challenge.id}
-                  challenge={challenge}
+                  challenge={formatChallengeForCard(challenge)}
                   viewMode={viewMode}
                   delay={index * 0.1}
-                  onViewDetails={handleViewChallenge}
+                  onViewDetails={() => handleViewChallenge(challenge.id)}
                 />
               ))}
             </div>
@@ -392,7 +618,7 @@ const ChallengesHub: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <div className="holographic-card border-0 rounded-xl p-8 max-w-3xl mx-auto">
+          <div className="holographic-card cosmic-border rounded-xl p-8 max-w-3xl mx-auto">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 2, ease: "linear" }}
@@ -413,6 +639,7 @@ const ChallengesHub: React.FC = () => {
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-cosmic-secondary to-cosmic-accent hover:from-cosmic-accent hover:to-cosmic-secondary"
+                onClick={() => navigate("/challenges/create")}
               >
                 Create a Challenge
               </Button>
@@ -420,6 +647,18 @@ const ChallengesHub: React.FC = () => {
           </div>
         </motion.div>
       </main>
+
+      {/* Challenge Details Modal */}
+      <AnimatePresence>
+        {selectedChallenge && (
+          <ChallengeDetails
+            challenge={selectedChallenge}
+            onClose={() => setSelectedChallenge(null)}
+            onJoin={handleJoinChallenge}
+            onLeave={handleLeaveChallenge}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Action button */}
       <ActionButton />

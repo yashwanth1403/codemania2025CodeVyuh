@@ -117,22 +117,29 @@ export const createUser = async (req: Request, res: Response) => {
     const { clerkId, email, username, name, bio, avatarUrl, experienceLevel } =
       req.body;
 
-    // Check if user already exists with the same clerk ID
-    const existingUser = await prisma.user.findUnique({
-      where: { clerkId },
+    // Check if user already exists with the same email
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, ...(clerkId ? [{ clerkId }] : [])],
+      },
     });
 
     if (existingUser) {
       return res.status(400).json({
         status: "error",
-        message: "User already exists with this Clerk ID",
+        message: "User already exists with this email or Clerk ID",
       });
     }
+
+    // Generate a random clerkId if not provided (for direct signups)
+    const userClerkId =
+      clerkId ||
+      `local_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
     // Create new user
     const newUser = await prisma.user.create({
       data: {
-        clerkId,
+        clerkId: userClerkId,
         email,
         username,
         name,

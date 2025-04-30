@@ -12,6 +12,7 @@ import {
 import Index from "./pages/Index";
 import AIMatching from "./pages/AIMatching";
 import ChallengesHub from "./pages/ChallengesHub";
+import CreateChallenge from "./pages/CreateChallenge";
 import GamificationProfile from "./pages/GamificationProfile";
 import NotFound from "./pages/NotFound";
 import ProfileSetup from "./pages/ProfileSetup";
@@ -30,17 +31,16 @@ const AppWithAuth = () => {
   return (
     <AuthProvider>
       <Routes>
-        {/* Public routes */}
+        {/* All routes are now publicly accessible */}
         <Route path="/" element={<Index />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-
-        {/* Protected routes */}
         <Route path="/profile-setup" element={<ProfileSetup />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/ai-matching" element={<AIMatching />} />
         <Route path="/challenges" element={<ChallengesHub />} />
+        <Route path="/challenges/create" element={<CreateChallenge />} />
         <Route path="/profile" element={<GamificationProfile />} />
 
         {/* Fallback route */}

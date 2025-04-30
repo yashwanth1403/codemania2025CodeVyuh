@@ -114,19 +114,18 @@ const ProfileSetup: React.FC = () => {
     socialLinks: [],
   });
 
-  // Redirect if not logged in or already has profile
+  // Redirect if already has profile
   React.useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    } else if (user.profileComplete) {
+    if (user && user.profileComplete) {
       navigate("/dashboard");
-    } else {
+    } else if (user) {
       // Set initial profile data from user context
       setProfileData((prev) => ({
         ...prev,
         clerkId: user.clerkId,
         email: user.email,
         name: user.name || prev.name,
+        username: user.username || prev.username,
       }));
     }
   }, [user, navigate]);
@@ -473,7 +472,7 @@ const ProfileSetup: React.FC = () => {
                         disabled
                       />
                       <p className="text-xs text-gray-500">
-                        Your email from Clerk authentication
+                        Your email address will be used for communication
                       </p>
                     </div>
 

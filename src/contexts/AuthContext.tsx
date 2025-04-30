@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { demoUsers } from "@/lib/demoData";
 
 interface Skill {
   name: string;
@@ -27,6 +28,7 @@ interface User {
   skills?: Skill[];
   interests?: Interest[];
   socialLinks?: SocialLink[];
+  xpPoints?: number;
 }
 
 interface AuthContextType {
@@ -60,26 +62,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // In a real implementation, this would call your API and Clerk SDK
-      // For demo, we'll simulate a successful login
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Simulate Clerk authentication
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      const userData: User = {
-        clerkId: `user_${Math.random().toString(36).substring(2, 10)}`,
-        email,
-        name: "Demo User",
-        profileComplete: false,
-      };
+      // Find user in demo data
+      const demoUser = demoUsers.find((user) => user.email === email);
+
+      if (!demoUser) {
+        throw new Error("User not found");
+      }
+
+      // Clone the user to avoid reference issues
+      const userData: User = JSON.parse(JSON.stringify(demoUser));
 
       localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
 
-      // Determine where to redirect
-      if (!userData.profileComplete) {
-        navigate("/profile-setup");
-      } else {
-        navigate("/dashboard");
-      }
+      // Determine where to redirect - all demo users are complete
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -91,15 +91,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // In a real implementation, this would call your API and Clerk SDK
-      // For demo, we'll simulate a successful signup
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Check if email already exists in demo data
+      if (demoUsers.some((user) => user.email === email)) {
+        throw new Error("Email already in use");
+      }
 
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Create new user with demo data format
       const userData: User = {
-        clerkId: `user_${Math.random().toString(36).substring(2, 10)}`,
+        id: `user${Math.floor(Math.random() * 10000)}`,
+        clerkId: `local_${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(2, 10)}`,
         email,
         name,
+        username: email.split("@")[0],
         profileComplete: false,
+        xpPoints: 0,
       };
 
       localStorage.setItem("user", JSON.stringify(userData));
