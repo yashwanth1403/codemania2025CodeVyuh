@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import NavigationBar from '@/components/NavigationBar';
 import { Button } from '@/components/ui/button';
@@ -114,7 +113,7 @@ const ChallengesHub = () => {
   const [activeDifficulty, setActiveDifficulty] = useState("All");
   const [activeDuration, setActiveDuration] = useState("All");
   const [filteredChallenges, setFilteredChallenges] = useState(challenges);
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
     setIsLoaded(true);
@@ -259,7 +258,7 @@ const ChallengesHub = () => {
               
               <div className="flex">
                 <button 
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setViewMode("grid")}
                   className={`p-2 rounded-l-md ${viewMode === 'grid' 
                     ? 'bg-cosmic-primary text-white' 
                     : 'bg-cosmic-dark/40 text-gray-300 hover:bg-cosmic-dark/60'}`}
@@ -267,7 +266,7 @@ const ChallengesHub = () => {
                   <HexagonIcon size={18} />
                 </button>
                 <button 
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setViewMode("list")}
                   className={`p-2 rounded-r-md ${viewMode === 'list' 
                     ? 'bg-cosmic-primary text-white' 
                     : 'bg-cosmic-dark/40 text-gray-300 hover:bg-cosmic-dark/60'}`}
